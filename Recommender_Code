@@ -1,0 +1,71 @@
+import pandas as pd
+import numpy as np
+import sklearn
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+from sklearn.neighbors import KNeighborsRegressor
+
+
+ratingsDF = pd.read_csv("C:/Users/Matt/Desktop/DSC/680/Ratings1.csv")
+booksDF = pd.read_csv("C:/Users/Matt/Desktop/DSC/680/books.csv")
+usersDF = pd.read_csv("C:/Users/Matt/Desktop/DSC/680/users.csv")
+
+#Data Wrangling/EDA
+
+booksDF = booksDF[["ISBN", "Book-Title"]]
+print(booksDF.head())
+print(booksDF.isna().sum().sum())
+
+
+print(usersDF.head())
+usersDF.dropna(subset=["Age"], inplace=True)
+print(usersDF.head())
+print(usersDF.isna().sum().sum())
+
+
+print(ratingsDF.shape)
+print(ratingsDF.head())
+print(ratingsDF.isna().sum().sum())
+#Average Rating
+print(ratingsDF["Book-Rating"].mean())
+
+# Calculate ranking - This indicates that 20% of the books have equal or higher 8.0 rating
+r = ratingsDF['Book-Rating'].quantile(.80)
+print("The ratings for 20% of the books is", r, "or higher")
+
+# Formatting Ratings Table
+user_ratings_table = ratingsDF.pivot(index='User-ID', columns='ISBN',values='Book-Rating')
+user_ratings_table.dropna()
+
+print(user_ratings_table.head())
+
+# Fill NaN with zeros
+
+user_ratings_table_replace = user_ratings_table.fillna(0)
+print(user_ratings_table_replace.head())
+
+# Account for Bias in the scoring - using Mean of ratings for each user to center the scores
+
+avg_rating = user_ratings_table_replace.mean(axis=1)
+user_ratings_table_center = user_ratings_table_replace.sub(avg_rating, axis=1)
+user_ratings_table_normal = user_ratings_table_replace.fillna(0)
+
+print(user_ratings_table_normal.head())
+
+target_user_x = user_ratings_table_normal.loc[[276747]]
+other_users_y = user_ratings_table_normal["8879839993"]
+other_users_x = user_ratings_table_normal[other_users_y.notnull()]
+
+
+#Instantiate the Model
+
+user_knn = KNeighborsRegressor(metric='cosine', n_neighbors=1500)
+
+user_knn.fit(other_users_x, other_users_y)
+user_user_pred = user_knn.predict(target_user_x)
+
+
+#Find prediction for user
+print("The prediction for this user for this book is ",user_user_pred)
+
+
